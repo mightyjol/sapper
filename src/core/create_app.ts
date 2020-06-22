@@ -32,9 +32,9 @@ export function create_app({
 	const server_manifest = generate_server_manifest(manifest_data, path_to_routes, cwd, src, dest, dev);
 
 	const app = generate_app(manifest_data, path_to_routes);
-
-	write_if_changed(`${output}/internal/manifest-client.mjs`, client_manifest);
-	write_if_changed(`${output}/internal/manifest-server.mjs`, server_manifest);
+	const ext = 'snowpack' ? 'js' : 'mjs'
+	write_if_changed(`${output}/internal/manifest-client.${ext}`, client_manifest);
+	write_if_changed(`${output}/internal/manifest-server.${ext}`, server_manifest);
 	write_if_changed(`${output}/internal/App.svelte`, app);
 }
 
@@ -147,7 +147,10 @@ function generate_client_manifest(
 		export const routes = ${routes};
 
 		${dev ? `if (typeof window !== 'undefined') {
-			import(${stringify(posixify(path.resolve(__dirname, '../sapper-dev-client.js')))}).then(client => {
+			import(${
+				bundler !== 'snowpack' ? stringify(posixify(path.resolve(__dirname, '../sapper-dev-client.js'))) :
+				stringify('sapper/sapper-dev-client.js')
+			}).then(client => {
 				client.connect(${dev_port});
 			});
 		}` : ''}

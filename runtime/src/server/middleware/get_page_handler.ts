@@ -6,6 +6,7 @@ import devalue from 'devalue';
 import fetch from 'node-fetch';
 import URL from 'url';
 import { Manifest, Page, Req, Res } from './types';
+import build_info from './build_info';
 import { build_dir, dev, src_dir } from '@sapper/internal/manifest-server';
 import App from '@sapper/internal/App.svelte';
 
@@ -13,10 +14,6 @@ export function get_page_handler(
 	manifest: Manifest,
 	session_getter: (req: Req, res: Res) => Promise<any>
 ) {
-	const get_build_info = dev
-		? () => JSON.parse(fs.readFileSync(path.join(build_dir, 'build.json'), 'utf-8'))
-		: (assets => () => assets)(JSON.parse(fs.readFileSync(path.join(build_dir, 'build.json'), 'utf-8')));
-
 	const template = dev
 		? () => read_template(src_dir)
 		: (str => () => str)(read_template(build_dir));
@@ -46,12 +43,6 @@ export function get_page_handler(
 
 	async function handle_page(page: Page, req: Req, res: Res, status = 200, error: Error | string = null) {
 		const is_service_worker_index = req.path === '/service-worker-index.html';
-		const build_info: {
-			bundler: 'rollup' | 'webpack',
-			shimport: string | null,
-			assets: Record<string, string | string[]>,
-			legacy_assets?: Record<string, string>
-		 } = get_build_info();
 
 		res.setHeader('Content-Type', 'text/html');
 		res.setHeader('Cache-Control', dev ? 'no-cache' : 'max-age=600');
@@ -68,7 +59,7 @@ export function get_page_handler(
 			});
 		}
 
-		if (build_info.bundler === 'rollup') {
+		if (build_info.bundler === 'rollup' || build_info.bundler === 'snowpack') {
 			// TODO add dependencies and CSS
 			const link = preloaded_chunks
 				.filter(file => file && !file.match(/\.map$/))
@@ -283,7 +274,13 @@ export function get_page_handler(
 
 			if (has_service_worker) {
 				script += `if('serviceWorker' in navigator)navigator.serviceWorker.register('${req.baseUrl}/service-worker.js');`;
-			}
+			} 
+			// /** TODO: use this when implemented
+			// /* @see https://bugs.chromium.org/p/chromium/issues/detail?id=824647
+			// **/
+			// else if (build_info.bundler === 'snowpack') {
+			// 	script += `if('serviceWorker' in navigator)navigator.serviceWorker.register('${req.baseUrl}/client/service-worker.js', { type: "module" });`;
+			// }
 
 			const file = [].concat(build_info.assets.main).filter(file => file && /\.js$/.test(file))[0];
 			const main = `${req.baseUrl}/client/${file}`;
@@ -295,6 +292,11 @@ export function get_page_handler(
 				} else {
 					script += `var s=document.createElement("script");try{new Function("if(0)import('')")();s.src="${main}";s.type="module";s.crossOrigin="use-credentials";}catch(e){s.src="${req.baseUrl}/client/shimport@${build_info.shimport}.js";s.setAttribute("data-main","${main}")}document.head.appendChild(s)`;
 				}
+			} else if (build_info.bundler === 'snowpack') {
+				script += `</script>
+				<script>window.HMR_WEBSOCKET_URL="ws://localhost:8080"</script>
+				<script type="module" src="${main}"></script>
+				`;
 			} else {
 				script += `</script><script src="${main}">`;
 			}

@@ -2,8 +2,9 @@ import * as path from 'path';
 import RollupCompiler from './RollupCompiler';
 import { WebpackCompiler } from './WebpackCompiler';
 import { set_dev, set_src, set_dest } from '../../config/env';
+import SnowpackCompiler from './SnowpackCompiler';
 
-export type Compiler = RollupCompiler | WebpackCompiler;
+export type Compiler = RollupCompiler | WebpackCompiler | SnowpackCompiler;
 
 export type Compilers = {
 	client: Compiler;
@@ -12,7 +13,7 @@ export type Compilers = {
 }
 
 export default async function create_compilers(
-	bundler: 'rollup' | 'webpack',
+	bundler: 'rollup' | 'webpack' | 'snowpack',
 	cwd: string,
 	src: string,
 	dest: string,
@@ -51,17 +52,29 @@ export default async function create_compilers(
 		};
 	}
 
+	if (bundler === 'snowpack') {
+		const client = SnowpackCompiler.config_file('client');
+		const server = SnowpackCompiler.config_file('server');
+		validate_config({ client, server }, 'snowpack');
+
+		return {
+			client: new SnowpackCompiler('client', cwd),
+			server: new SnowpackCompiler('server', cwd),
+			serviceworker: SnowpackCompiler.config_file('serviceworker') && new SnowpackCompiler('serviceworker', cwd)
+		};
+	}
+
 	// this shouldn't be possible...
 	throw new Error(`Invalid bundler option '${bundler}'`);
 }
 
-function validate_config(config: any, bundler: 'rollup' | 'webpack') {
+function validate_config(config: any, bundler: 'rollup' | 'webpack' | 'snowpack') {
 	if (!config.client || !config.server) {
-		throw new Error(`${bundler}.config.js must export a { client, server, serviceworker? } object`);
+		throw new Error(`${bundler} must have a config for client and server.`);
 	}
 }
 
-function normalize_rollup_config(config: any) {
+export function normalize_rollup_config(config: any) {
 	if (typeof config.input === 'string') {
 		config.input = path.normalize(config.input);
 	} else {

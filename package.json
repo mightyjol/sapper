@@ -18,6 +18,7 @@
     "test": "test"
   },
   "dependencies": {
+    "@types/node-fetch": "^2.5.7",
     "html-minifier": "^4.0.0",
     "http-link-header": "^1.0.2",
     "shimport": "^1.0.1",
@@ -26,14 +27,16 @@
   },
   "devDependencies": {
     "@types/mocha": "^5.2.7",
-    "@types/node": "=8",
+    "@types/node": "^14.0.13",
     "@types/puppeteer": "^1.19.0",
+    "@types/ws": "^7.2.5",
     "agadoo": "^1.0.1",
     "cheap-watch": "^1.0.2",
     "cookie": "^0.4.0",
     "devalue": "^2.0.0",
     "eslint": "^5.16.0",
     "eslint-plugin-import": "^2.18.2",
+    "http-proxy-middleware": "^1.0.4",
     "kleur": "^3.0.3",
     "mime": "^2.4.4",
     "mocha": "^6.2.0",
@@ -53,6 +56,7 @@
     "rollup-plugin-svelte": "^5.1.0",
     "sade": "^1.6.1",
     "sirv": "^0.4.2",
+    "snowpack": "^2.3.1",
     "sucrase": "^3.10.1",
     "svelte": "^3.6.9",
     "svelte-loader": "^2.13.6",

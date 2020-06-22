@@ -37,7 +37,7 @@ export function dev(opts: Opts) {
 }
 
 class Watcher extends EventEmitter {
-	bundler: 'rollup' | 'webpack';
+	bundler: 'rollup' | 'webpack' | 'snowpack';
 	dirs: {
 		cwd: string;
 		src: string;
@@ -150,7 +150,7 @@ class Watcher extends EventEmitter {
 
 		rimraf(output);
 		mkdirp(output);
-		copy_runtime(output);
+		copy_runtime(output, this.bundler);
 
 		rimraf(dest);
 		mkdirp(`${dest}/client`);
@@ -254,6 +254,7 @@ class Watcher extends EventEmitter {
 								});
 
 								if (this.hot && this.bundler === 'webpack') {
+								// if (this.hot && (this.bundler === 'webpack' || this.bundler === 'snowpack')) { // use this to directly utilize snowpack hmr
 									this.dev_server.send({
 										status: 'completed'
 									});
@@ -281,7 +282,8 @@ class Watcher extends EventEmitter {
 							execArgv.push(`--inspect-port=${this.devtools_port}`);
 						}
 
-						this.proc = child_process.fork(`${dest}/server/server.js`, [], {
+						const modulePath = this.bundler !== 'snowpack' ? `${dest}/server/server.js` : `${cwd}/runtime.js`
+						this.proc = child_process.fork(modulePath, [], {
 							cwd: process.cwd(),
 							env: Object.assign({
 								PORT: this.port
@@ -311,6 +313,13 @@ class Watcher extends EventEmitter {
 
 					if (this.proc) {
 						if (this.restarting) return;
+						/** TODO: Verify whenever its better to restart the runtime while the browser received HMR
+						 * or to keep the child process running and send a message that there is a newer version. **/
+						if (this.bundler === 'snowpack') {
+							this.proc.send({ __sapper__: true, event: 'update' })
+							restart();
+							return;
+						}
 						this.restarting = true;
 						this.proc.removeListener('exit', emitFatal);
 						this.proc.kill();
@@ -326,6 +335,16 @@ class Watcher extends EventEmitter {
 				});
 			}
 		});
+
+		let watch_serviceworker = compilers.serviceworker
+			? () => {
+				watch_serviceworker = noop;
+
+				this.watch(compilers.serviceworker, {
+					name: 'service worker'
+				});
+			}
+			: noop;
 
 		this.watch(compilers.client, {
 			name: 'client',
@@ -363,16 +382,6 @@ class Watcher extends EventEmitter {
 				setTimeout(watch_serviceworker, 100);
 			}
 		});
-
-		let watch_serviceworker = compilers.serviceworker
-			? () => {
-				watch_serviceworker = noop;
-
-				this.watch(compilers.serviceworker, {
-					name: 'service worker'
-				});
-			}
-			: noop;
 	}
 
 	close() {

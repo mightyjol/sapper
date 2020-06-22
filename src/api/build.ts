@@ -51,7 +51,7 @@ export async function build({
 
 	rimraf(output);
 	mkdirp(output);
-	copy_runtime(output);
+	copy_runtime(output, bundler);
 
 	rimraf(dest);
 	mkdirp(`${dest}/client`);

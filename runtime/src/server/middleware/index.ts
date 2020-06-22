@@ -5,6 +5,7 @@ import { build_dir, dev, manifest } from '@sapper/internal/manifest-server';
 import { Handler, Req, Res } from './types';
 import { get_server_route_handler } from './get_server_route_handler';
 import { get_page_handler } from './get_page_handler';
+import get_snowpack_handler from './get_snowpack_handler';
 
 type IgnoreValue = Array | RegExp | function | string;
 
@@ -17,6 +18,7 @@ export default function middleware(opts: {
 	let emitted_basepath = false;
 
 	return compose_handlers(ignore, [
+		get_snowpack_handler(),
 		(req: Req, res: Res, next: () => void) => {
 			if (req.baseUrl === undefined) {
 				let { originalUrl } = req;

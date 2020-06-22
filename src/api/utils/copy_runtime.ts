@@ -13,8 +13,11 @@ const runtime = [
 	source: fs.readFileSync(path.join(__dirname, `../runtime/${file}`), 'utf-8')
 }));
 
-export function copy_runtime(output: string) {
+export function copy_runtime(output: string, bundler: 'rollup' | 'webpack' | 'snowpack') {
 	runtime.forEach(({ file, source }) => {
+		if (bundler === 'snowpack') {
+			file = file.replace('.mjs', '.js')
+		}
 		mkdirp(path.dirname(`${output}/${file}`));
 		fs.writeFileSync(`${output}/${file}`, source);
 	});
